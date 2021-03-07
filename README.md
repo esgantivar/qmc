@@ -17,7 +17,7 @@ Implementation of some machine learning algorithms using density matrices from q
 You can install the most recent version of the library with
 
 ```zsh
-pip install git+https://github.com/fagonzalezo/qmc.git
+pip install git+https://github.com/esgantivar/qmc.git
 ```
 
-Check our [examples](https://github.com/fagonzalezo/qmc/tree/master/examples) to see what you can do!
+Check our [examples](https://github.com/esgantivar/qmc/tree/master/examples) to see what you can do!

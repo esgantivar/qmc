@@ -95,7 +95,7 @@ class QFeatureMapRFFTN(tf.keras.layers.Layer):
         cos_norms = tf.linalg.norm(cos_vals, axis=1)
         sin_norms = tf.linalg.norm(sin_vals, axis=1)
         cos_psi = cos_vals / tf.expand_dims(cos_norms, axis=-1)
-        sin_psi = cos_vals / tf.expand_dims(sin_norms, axis=-1)
+        sin_psi = sin_vals / tf.expand_dims(sin_norms, axis=-1)
         return tf.stack([cos_psi, sin_psi], axis=2)
     
     def get_config(self):

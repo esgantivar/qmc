@@ -115,10 +115,10 @@ class QMClassifierSGD(tf.keras.Model):
         base_config = super().get_config()
         return {**base_config, **config}
 
-class QMClassifierSGDF(tf.keras.Model):
+class ComplexQMClassifierSGD(tf.keras.Model):
     """
     A Quantum Measurement Classifier model trainable using
-    gradient descent.
+    gradient descent with complex terms.
 
     Arguments:
         input_dim: dimension of the input
@@ -130,12 +130,12 @@ class QMClassifierSGDF(tf.keras.Model):
         random_state: random number generator seed.
     """
     def __init__(self, input_dim, dim_x, dim_y, num_eig=0, gamma=1, random_state=None):
-        super(QMClassifierSGDF, self).__init__()
-        self.fm_x = layers.QFeatureMapRFF(
+        super(ComplexQMClassifierSGD, self).__init__()
+        self.fm_x = layers.QFeatureMapComplexRFF(
             input_dim=input_dim,
             dim=dim_x, gamma=gamma, random_state=random_state)
-        self.qm = layers.QMeasureClassifEigF(dim_x=dim_x, dim_y=dim_y, num_eig=num_eig)
-        self.dm2dist = layers.DensityMatrix2Dist()
+        self.qm = layers.ComplexQMeasureClassifEig(dim_x=dim_x, dim_y=dim_y, num_eig=num_eig)
+        self.dm2dist = layers.ComplexDensityMatrix2Dist()
         self.dim_x = dim_x
         self.dim_y = dim_y
         self.gamma = gamma
@@ -279,7 +279,8 @@ class DMKDClassifier(tf.keras.Model):
         for i in range(self.num_classes):
             probs.append(self.qmd[i](psi_x))
         posteriors = tf.stack(probs, axis=-1)
-        posteriors = posteriors / tf.expand_dims(tf.reduce_sum(posteriors, axis=-1), axis=-1)
+        posteriors = (posteriors / 
+            tf.expand_dims(tf.reduce_sum(posteriors, axis=-1), axis=-1))
         return posteriors
 
     @tf.function
@@ -310,6 +311,79 @@ class DMKDClassifier(tf.keras.Model):
         for i in range(self.num_classes):
             self.qmd[i].weights[0].assign(self.qmd[i].weights[0] /
                                           self.num_samples[i])
+        return result
+
+    def get_rhos(self):
+        weights = [qmd.weights[0] for qmd in self.qmd]
+        return weights
+
+    def get_config(self):
+        config = {
+            "dim_x": self.dim_x,
+            "num_classes": self.num_classes
+        }
+        base_config = super().get_config()
+        return {**base_config, **config}
+
+class ComplexDMKDClassifier(tf.keras.Model):
+    """
+    A Quantum Measurement Kernel Density Classifier model with complex terms.
+    Arguments:
+        fm_x: Quantum feature map layer for inputs
+        dim_x: dimension of the input quantum feature map
+        num_classes: int number of classes
+    """
+    def __init__(self, fm_x, dim_x, num_classes=2):
+        super(ComplexDMKDClassifier, self).__init__()
+        self.fm_x = fm_x
+        self.dim_x = dim_x
+        self.num_classes = num_classes
+        self.qmd = []
+        for _ in range(num_classes):
+            self.qmd.append(layers.ComplexQMeasureDensity(dim_x))
+        self.cp = layers.CrossProduct()
+        self.num_samples = tf.Variable(
+            initial_value=tf.zeros((num_classes,)),
+            trainable=False
+            )
+
+    def call(self, inputs):
+        psi_x = self.fm_x(inputs)
+        probs = []
+        for i in range(self.num_classes):
+            probs.append(self.qmd[i](psi_x))
+        posteriors = tf.stack(probs, axis=-1)
+        posteriors = posteriors / tf.expand_dims(tf.reduce_sum(posteriors, axis=-1), axis=-1)
+        return posteriors
+
+    @tf.function
+    def call_train(self, x, y):
+        if not self.qmd[0].built:
+            self.call(x)
+        psi = self.fm_x(x) # shape (bs, dim_x)
+        rho = self.cp([psi, tf.math.conj(psi)]) # shape (bs, dim_x, dim_x)
+        ohy = tf.keras.backend.one_hot(y, self.num_classes)
+        ohy = tf.reshape(ohy, (-1, self.num_classes))
+        num_samples = tf.squeeze(tf.reduce_sum(ohy, axis=0))
+        ohy = tf.expand_dims(ohy, axis=-1) 
+        ohy = tf.expand_dims(ohy, axis=-1) # shape (bs, num_classes, 1, 1)
+        rhos = tf.cast(ohy, tf.complex64) * tf.expand_dims(rho, axis=1) # shape (bs, num_classes, dim_x, dim_x)
+        rhos = tf.reduce_sum(rhos, axis=0) # shape (num_classes, dim_x, dim_x)
+        self.num_samples.assign_add(num_samples)
+        return rhos
+
+    def train_step(self, data):
+        x, y = data
+        rhos = self.call_train(x, y)
+        for i in range(self.num_classes):
+            self.qmd[i].weights[0].assign_add(rhos[i])
+        return {}
+
+    def fit(self, *args, **kwargs):
+        result = super(ComplexDMKDClassifier, self).fit(*args, **kwargs)
+        for i in range(self.num_classes):
+            self.qmd[i].weights[0].assign(self.qmd[i].weights[0] /
+                                          tf.cast(self.num_samples[i], tf.complex64))
         return result
 
     def get_rhos(self):
@@ -391,7 +465,8 @@ class ComplexDMKDClassifierSGD(tf.keras.Model):
         gamma: float. Gamma parameter of the RBF kernel to be approximated
         random_state: random number generator seed
     """
-    def __init__(self, input_dim, dim_x, num_classes, num_eig=0, gamma=1, random_state=None):
+    def __init__(self, input_dim, dim_x, num_classes, 
+                 num_eig=0, gamma=1, random_state=None):
         super(ComplexDMKDClassifierSGD, self).__init__()
         self.fm_x = layers.QFeatureMapComplexRFF(
             input_dim=input_dim,
@@ -539,10 +614,10 @@ class QMRegressorSGD(tf.keras.Model):
         base_config = super().get_config()
         return {**base_config, **config}
 
-class QMRegressorSGDF(tf.keras.Model):
+class ComplexQMRegressorSGD(tf.keras.Model):
     """
     A Quantum Measurement Regressor model trainable using
-    gradient descent.
+    gradient descent with complex terms.
 
     Arguments:
         input_dim: dimension of the input
@@ -554,12 +629,12 @@ class QMRegressorSGDF(tf.keras.Model):
         random_state: random number generator seed.
     """
     def __init__(self, input_dim, dim_x, dim_y, num_eig=0, gamma=1, random_state=None):
-        super(QMRegressorSGDF, self).__init__()
-        self.fm_x = layers.QFeatureMapRFF(
+        super(ComplexQMRegressorSGD, self).__init__()
+        self.fm_x = layers.QFeatureMapComplexRFF(
             input_dim=input_dim,
             dim=dim_x, gamma=gamma, random_state=random_state)
-        self.qm = layers.QMeasureClassifEigF(dim_x=dim_x, dim_y=dim_y, num_eig=num_eig)
-        self.dmregress = layers.DensityMatrixRegression()
+        self.qm = layers.ComplexQMeasureClassifEig(dim_x=dim_x, dim_y=dim_y, num_eig=num_eig)
+        self.dmregress = layers.ComplexDensityMatrixRegression()
         self.dim_x = dim_x
         self.dim_y = dim_y
         self.gamma = gamma

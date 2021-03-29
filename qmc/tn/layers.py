@@ -90,13 +90,9 @@ class QFeatureMapRFFTN(tf.keras.layers.Layer):
     
     def call(self, inputs):
         vals = tf.matmul(inputs, self.rff_weights) + self.offset
-        cos_vals = tf.math.cos(vals) * tf.sqrt(2. / self.dim)
-        sin_vals = tf.math.sin(vals) * tf.sqrt(2. / self.dim)
-        cos_norms = tf.linalg.norm(cos_vals, axis=1)
-        sin_norms = tf.linalg.norm(sin_vals, axis=1)
-        cos_psi = cos_vals / tf.expand_dims(cos_norms, axis=-1)
-        sin_psi = sin_vals / tf.expand_dims(sin_norms, axis=-1)
-        return tf.stack([cos_psi, sin_psi], axis=2)
+        #cos_vals = tf.math.cos(vals)
+        #sin_vals = tf.math.sin(vals)
+        return tf.stack([vals, 1-vals], axis=2)
     
     def get_config(self):
         config = {

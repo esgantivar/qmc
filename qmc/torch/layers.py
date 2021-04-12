@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import torch.nn.functional as F
 from sklearn.kernel_approximation import RBFSampler
 
 class QFeatureMapRFF(torch.nn.Module):
@@ -74,4 +75,36 @@ class QMeasureDensity(torch.nn.Module):
             self.rho, 
             oper
         )  # shape (b, nx, ny, nx, ny)
+        return rho_res
+
+class QMeasureDensityEig(torch.nn.Module):
+    def __init__(self, dim_x: int, num_eig: int = 0):
+        super(QMeasureDensityEig, self).__init__()
+        self.dim_x = dim_x
+        if num_eig < 1:
+            num_eig = dim_x
+        self.num_eig = num_eig
+        self._build()
+    
+    def _build(self):
+        self.eig_vec = torch.nn.Parameter(
+            torch.nn.init.normal_(torch.empty(
+                self.dim_x, self.num_eig)
+            )
+        )
+        self.eig_val = torch.nn.Parameter(
+            torch.nn.init.normal_(torch.empty((self.num_eig, )))
+        )
+
+    def forward(self, inputs):
+        norms = torch.squeeze(torch.linalg.norm(self.eig_vec, dim=0), dim=0)
+        eig_vec = self.eig_vec / norms
+        eig_val = F.relu(self.eig_val)
+        eig_val = eig_val / eig_val.sum()
+        rho_h = torch.matmul(eig_vec, torch.diag(torch.sqrt(eig_val)))
+        rho_h = torch.matmul(torch.conj(inputs), rho_h)
+        rho_res = torch.einsum(
+            '...i, ...i -> ...',
+            rho_h, torch.conj(rho_h)
+        ) # shape (b,)
         return rho_res

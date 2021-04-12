@@ -11,9 +11,7 @@ def get_moons():
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=42
     )
-    y_train = y_train[:, np.newaxis]
-    y_test = y_test[:, np.newaxis]
-    return (X_train, y_train), (X_test, y_test)
+    return (X, y), (X_train, y_train), (X_test, y_test)
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """

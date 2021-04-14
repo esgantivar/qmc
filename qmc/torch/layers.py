@@ -28,15 +28,13 @@ class QFeatureMapRFF(torch.nn.Module):
         self.rff_weights = torch.nn.Parameter(
             torch.tensor(
                 rbf_sampler.random_weights_,
-                dtype=torch.float32,
-                requires_grad=True
+                dtype=torch.float32
             )
         )
         self.offset = torch.nn.Parameter(
             torch.tensor(
                 rbf_sampler.random_offset_,
-                dtype=torch.float32,
-                requires_grad=True
+                dtype=torch.float32
             )
         )
         self.built = True
@@ -88,12 +86,14 @@ class QMeasureDensityEig(torch.nn.Module):
     
     def _build(self):
         self.eig_vec = torch.nn.Parameter(
-            torch.nn.init.normal_(torch.empty(
-                self.dim_x, self.num_eig)
+            torch.nn.init.normal_(
+                torch.empty(self.dim_x, self.num_eig)
             )
         )
         self.eig_val = torch.nn.Parameter(
-            torch.nn.init.normal_(torch.empty((self.num_eig, )))
+            torch.nn.init.normal_(
+                torch.empty((self.num_eig, ))
+            )
         )
 
     def forward(self, inputs):

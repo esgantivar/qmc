@@ -70,7 +70,7 @@ class DMKDClassifierSGD(torch.nn.Module):
         for i in range(self.num_classes):
             probs.append(self.qmd[i](psi_x))
         posteriors = torch.stack(probs, dim=-1)
-        posteriors = (posteriors / torch.squeeze(posteriors.sum(),dim=-1))
+        posteriors = (posteriors / torch.unsqueeze(torch.sum(posteriors, dim=-1),dim=-1))
         return (F.softmax(posteriors)).to(torch.float)
     
     def predict(self, inputs):

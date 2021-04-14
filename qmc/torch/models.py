@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from .layers import QMeasureDensity, QFeatureMapRFF, QMeasureDensityEig
+from .utils_layers import CrossProduct
 
 class DMKDClassifier(torch.nn.Module):
     def __init__(self, fm_x, dim_x, num_classes=2):
@@ -11,38 +12,38 @@ class DMKDClassifier(torch.nn.Module):
         self.qmd = []
         for _ in range(num_classes):
             self.qmd.append(QMeasureDensity(dim_x))
-        self.num_samples = torch.tensor(
-            torch.zeros((num_classes, ))
-        )
+        self.cp = CrossProduct()
+        self.num_samples = torch.zeros((num_classes, ))
     
-    def call_train(self, x, y):
+    def calc_batch_train(self, x, y):
         psi = self.fm_x(x) # shape (bs, dim_x)
-        rho = self.cp([psi, tf.math.conj(psi)]) # shape (bs, dim_x, dim_x)
-        ohy = tf.keras.backend.one_hot(y, self.num_classes)
-        ohy = tf.reshape(ohy, (-1, self.num_classes))
-        num_samples = tf.squeeze(tf.reduce_sum(ohy, axis=0))
-        ohy = tf.expand_dims(ohy, axis=-1) 
-        ohy = tf.expand_dims(ohy, axis=-1) # shape (bs, num_classes, 1, 1)
-        rhos = tf.cast(ohy, tf.complex64) * tf.expand_dims(rho, axis=1) # shape (bs, num_classes, dim_x, dim_x)
-        rhos = tf.reduce_sum(rhos, axis=0) # shape (num_classes, dim_x, dim_x)
-        self.num_samples.assign_add(num_samples)
+        rho = self.cp([psi, torch.conj(psi)]) # shape (bs, dim_x, dim_x)
+        ohy = torch.reshape(y, (-1, self.num_classes))
+        num_samples = torch.squeeze(torch.sum(ohy, dim=0))
+        ohy = torch.unsqueeze(ohy, dim=-1) 
+        ohy = torch.unsqueeze(ohy, dim=-1) # shape (bs, num_classes, 1, 1)
+        rhos = ohy * torch.unsqueeze(rho, axis=1) # shape (bs, num_classes, dim_x, dim_x)
+        rhos = torch.sum(rhos, axis=0) # shape (num_classes, dim_x, dim_x)
+        self.num_samples += num_samples
         return rhos
-
-    def forward(self, inputs):
-        '''
-            1: fit
-            2: train_step
-            3: call
-        '''
-        # fit
+    
+    def calc_train(self, x, y):
+        rhos = self.calc_batch_train(x, y)
         for i in range(self.num_classes):
-            self.qmd[i].weights[0].assign(self.qmd[i].weights[0] / self.num_samples[i])
+            self.qmd[i].rho += rhos[i]
+        for i in range(self.num_classes):
+            self.qmd[i].rho /= self.num_samples[i]
+        
+    def forward(self, inputs):
+        # Quantum feature mapping
         psi_x = self.fm_x(inputs)
         probs = []
+        # Prediction operator
         for i in range(self.num_classes):
             probs.append(self.qmd[i](psi_x))
         posteriors = torch.stack(probs, dim=-1)
-        posteriors = (posteriors / torch.squeeze(posteriors.sum(), dim=-1))
+        posteriors = (posteriors / torch.unsqueeze(torch.sum(posteriors, dim=-1), dim=-1))
+        # Partial trace => argmax over posteriors
         return posteriors
 
 

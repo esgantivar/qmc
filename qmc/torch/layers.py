@@ -53,13 +53,12 @@ class QMeasureDensity(torch.nn.Module):
             self,
             dim_x: int
     ):
-        self.dim_x = dim_x
         super(QMeasureDensity, self).__init__()
+        self.dim_x = dim_x
         self._build()
 
     def _build(self):
-        self.rho = rho = torch.nn.Parameter(torch.zeros(self.dim_x, self.dim_x))
-        self.built = True
+        self.rho = torch.zeros(self.dim_x, self.dim_x)
 
     def forward(self, inputs):
         oper = torch.einsum(

@@ -13,6 +13,6 @@ setuptools.setup(
     author="Fabio A. González et al.",
     author_email="fagonzalezo@unal.edu.co",
     license="GNUv3",
-    install_requires=["scipy", "numpy >= 1.19.2", "scikit-learn", "tensorflow >= 2.2.0", "typeguard"],
+    install_requires=["scipy", "numpy >= 1.19.2", "scikit-learn", "tensorflow >= 2.2.0", "typeguard", "torch"],
     python_requires='>=3.6'
 )

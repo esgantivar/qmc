@@ -3,13 +3,14 @@ import numpy as np
 import torch.nn.functional as F
 from sklearn.kernel_approximation import RBFSampler
 
+
 class QFeatureMapRFF(torch.nn.Module):
     def __init__(
-        self,
-        input_dim: int,
-        dim: int = 100,
-        gamma: float = 1,
-        random_state=None
+            self,
+            input_dim: int,
+            dim: int = 100,
+            gamma: float = 1,
+            random_state=None
     ):
         super(QFeatureMapRFF, self).__init__()
         self.input_dim = input_dim
@@ -17,7 +18,7 @@ class QFeatureMapRFF(torch.nn.Module):
         self.gamma = gamma
         self.random_state = random_state
         self._build()
-    
+
     def _build(self):
         rbf_sampler = RBFSampler(
             gamma=self.gamma,
@@ -38,7 +39,7 @@ class QFeatureMapRFF(torch.nn.Module):
             )
         )
         self.built = True
-    
+
     def forward(self, input_data):
         vals = torch.matmul(input_data, self.rff_weights) + self.offset
         vals = torch.cos(vals)
@@ -65,14 +66,15 @@ class QMeasureDensity(torch.nn.Module):
             '...i,...j->...ij',
             inputs,
             torch.conj(inputs)
-        ) # shape (b, nx, nx)
+        )  # shape (b, nx, nx)
         rho_res = torch.einsum(
             '...ik, km, ...mi -> ...',
-            oper, 
-            self.rho, 
+            oper,
+            self.rho,
             oper
         )  # shape (b, nx, ny, nx, ny)
         return rho_res
+
 
 class QMeasureDensityEig(torch.nn.Module):
     def __init__(self, dim_x: int, num_eig: int = 0):
@@ -82,7 +84,7 @@ class QMeasureDensityEig(torch.nn.Module):
             num_eig = dim_x
         self.num_eig = num_eig
         self._build()
-    
+
     def _build(self):
         self.eig_vec = torch.nn.Parameter(
             torch.nn.init.normal_(
@@ -91,7 +93,7 @@ class QMeasureDensityEig(torch.nn.Module):
         )
         self.eig_val = torch.nn.Parameter(
             torch.nn.init.normal_(
-                torch.empty((self.num_eig, ))
+                torch.empty((self.num_eig,))
             )
         )
 
@@ -105,5 +107,5 @@ class QMeasureDensityEig(torch.nn.Module):
         rho_res = torch.einsum(
             '...i, ...i -> ...',
             rho_h, torch.conj(rho_h)
-        ) # shape (b,)
+        )  # shape (b,)
         return rho_res

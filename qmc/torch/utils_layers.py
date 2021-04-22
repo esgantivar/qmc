@@ -1,10 +1,11 @@
 import torch
 
+
 class CrossProduct(torch.nn.Module):
     def __init__(self):
         super(CrossProduct, self).__init__()
         self.built = False
-    
+
     def _build(self, inputs):
         idx1 = 'abcdefghij'
         idx2 = 'klmnopqrst'
@@ -12,7 +13,7 @@ class CrossProduct(torch.nn.Module):
                         '...' + idx2[:len(inputs[1].shape) - 1] + '->' +
                         '...' + idx1[:len(inputs[0].shape) - 1] +
                         idx2[:len(inputs[1].shape) - 1])
-        self.built = True 
+        self.built = True
 
     def forward(self, inputs):
         if len(inputs) != 2:

@@ -4,6 +4,7 @@ import unittest
 from layers import QFeatureMapRFF
 from utils import get_moons
 
+
 class TestRFFLayer(unittest.TestCase):
     def test_rff(self):
         (X, y), (x_train, y_train), (x_test, y_test) = get_moons()

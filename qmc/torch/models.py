@@ -1,5 +1,5 @@
 import torch
-from .layers import QMeasureDensity, QFeatureMapRFF, QMeasureDensityEig
+from .layers import QMeasureDensity, QFeatureMapRFF, QMeasureDensityEig, QMeasureDensityTNEig
 from .utils_layers import CrossProduct
 
 
@@ -75,3 +75,21 @@ class DMKDClassifierSGD(torch.nn.Module):
 
     def predict(self, inputs):
         y_pred = self.forward(inputs)
+
+
+class DMKDClassifierTNSGD(DMKDClassifierSGD):
+    def __init__(self, input_dim, dim_x, num_classes, num_eig=0, gamma=1, random_state=None):
+        super(DMKDClassifierTNSGD, self).__init__(input_dim, dim_x, num_classes, num_eig, gamma, random_state)
+        self.fm_x = QFeatureMapRFF(
+            input_dim=input_dim,
+            dim=dim_x,
+            gamma=gamma,
+            random_state=random_state
+        )
+        self.dim_x = dim_x
+        self.num_classes = num_classes
+        self.qmd = []
+        for _ in range(num_classes):
+            self.qmd.append(QMeasureDensityTNEig(dim_x, num_eig))
+        self.gamma = gamma
+        self.random_state = random_state

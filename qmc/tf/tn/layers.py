@@ -5,7 +5,7 @@ import numpy as np
 
 class QMeasureDensityMPS(tf.keras.layers.Layer):
     def __init__(self, n_sites, d_bond, d_phys, **kwargs):
-        super(QMeasureDensityMPS).__init__(**kwargs)
+        super(QMeasureDensityMPS, self).__init__(**kwargs)
         self.single_rank = n_sites // 2
         self.n_sites = n_sites
         self.d_bond = d_bond

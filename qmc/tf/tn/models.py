@@ -5,7 +5,7 @@ from qmc.tf.tn.layers import QMeasureDensityMPS
 
 class DMKDClassifierTNSGD(tf.keras.Model):
     def __init__(self, num_classes=10, n_sites=28 ** 2, d_bond=8, d_phys=2, **kwargs):
-        super(DMKDClassifierTNSGD, self).__init__()
+        super(DMKDClassifierTNSGD, self).__init__(**kwargs)
         self.d_bond = d_bond
         self.n_sites = n_sites
         self.d_phys = d_phys
@@ -20,3 +20,11 @@ class DMKDClassifierTNSGD(tf.keras.Model):
             probs.append(self.qmd[i](inputs))
         posteriors = tf.stack(probs, axis=-1)
         return tf.nn.softmax(posteriors)
+
+    def get_config(self):
+        return {
+            "n_sites": self.n_sites,
+            "num_classes": self.num_classes,
+            "d_bond": self.d_bond,
+            "d_phys": self.d_phys
+        }
